@@ -7,7 +7,7 @@ import (
 )
 
 type Scanner interface {
-	Scan() (string, error)
+	Scan() ([]byte, error)
 }
 
 type scanner struct {
@@ -18,13 +18,13 @@ func NewScanner(r io.Reader) Scanner {
 	return &scanner{br: bufio.NewReader(r)}
 }
 
-func (s *scanner) Scan() (string, error) {
+func (s *scanner) Scan() ([]byte, error) {
 	line, isPrefix, err := s.br.ReadLine()
 	if err != nil {
-		return string(line), err
+		return line, err
 	}
 	if !isPrefix {
-		return string(line), nil
+		return line, nil
 	}
 	// here's a long line
 	buf := bytes.NewBuffer(line)
@@ -32,13 +32,13 @@ func (s *scanner) Scan() (string, error) {
 		line, isPrefix, rerr := s.br.ReadLine()
 		_, werr := buf.Write(line)
 		if rerr != nil {
-			return buf.String(), rerr
+			return buf.Bytes(), rerr
 		}
 		if werr != nil {
-			return buf.String(), werr
+			return buf.Bytes(), werr
 		}
 		if !isPrefix {
-			return buf.String(), nil
+			return buf.Bytes(), nil
 		}
 	}
 }
