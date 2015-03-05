@@ -19,9 +19,9 @@ func NewScanner(r io.Reader) Scanner {
 }
 
 func (s *scanner) Scan() ([]byte, error) {
-	line, isPrefix, err := s.br.ReadLine()
-	if err != nil {
-		return line, err
+	line, isPrefix, rerr := s.br.ReadLine()
+	if rerr != nil {
+		return line, rerr
 	}
 	if !isPrefix {
 		return line, nil
@@ -29,7 +29,7 @@ func (s *scanner) Scan() ([]byte, error) {
 	// here's a long line
 	buf := bytes.NewBuffer(line)
 	for {
-		line, isPrefix, rerr := s.br.ReadLine()
+		line, isPrefix, rerr = s.br.ReadLine()
 		_, werr := buf.Write(line)
 		if rerr != nil {
 			return buf.Bytes(), rerr
