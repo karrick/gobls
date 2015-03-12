@@ -8,7 +8,7 @@ import (
 
 const (
 	lineCount  = 100
-	lineLength = 4096
+	lineLength = 1024
 )
 
 func makeBuffer(lineCount, lineLength int) *bytes.Buffer {
@@ -80,25 +80,33 @@ func TestVeryLargeLinesRequireSingleInvocation(t *testing.T) {
 func BenchmarkBufioScanner(b *testing.B) {
 	master := makeBuffer(lineCount, lineLength)
 	initial := master.Bytes()
+	var line string
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		s := bufio.NewScanner(bytes.NewBuffer(initial))
 		for s.Scan() {
-			_ = s.Text()
+			line = s.Text()
 		}
+	}
+	if len(line) != lineLength {
+		b.Errorf("Actual: %#v; Expected: %#v", len(line), lineLength)
 	}
 }
 
 func BenchmarkGobls(b *testing.B) {
 	master := makeBuffer(lineCount, lineLength)
 	initial := master.Bytes()
+	var line string
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		s := NewScanner(bytes.NewBuffer(initial))
 		for s.Scan() {
-			_ = s.String()
+			line = s.String()
 		}
+	}
+	if len(line) != lineLength {
+		b.Errorf("Actual: %#v; Expected: %#v", len(line), lineLength)
 	}
 }
