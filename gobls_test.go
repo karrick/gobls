@@ -88,6 +88,9 @@ func BenchmarkBufioScanner(b *testing.B) {
 		for s.Scan() {
 			line = s.Text()
 		}
+		if s.Err() != nil {
+			b.Fatal("Actual: %#v; Expected: %#v", s.Err(), nil)
+		}
 	}
 	if len(line) != lineLength {
 		b.Errorf("Actual: %#v; Expected: %#v", len(line), lineLength)
@@ -104,6 +107,9 @@ func BenchmarkGobls(b *testing.B) {
 		s := NewScanner(bytes.NewBuffer(initial))
 		for s.Scan() {
 			line = s.String()
+		}
+		if s.Err() != nil {
+			b.Fatal("Actual: %#v; Expected: %#v", s.Err(), nil)
 		}
 	}
 	if len(line) != lineLength {
