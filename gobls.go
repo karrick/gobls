@@ -6,10 +6,24 @@ import (
 	"io"
 )
 
+// Scanner provides an interface for reading newline-delimited lines
+// of text. It is similar to `bufio.Scanner`, but wraps
+// `bufio.ReadLine` so lines of arbitrary length can be
+// scanned. Successive calls to the Scan method will step through the
+// lines of a file, skipping the newline whitespace between lines.
+//
+// Scanning stops unrecoverably at EOF, or at the first I/O
+// error. Unlike `bufio.Scanner`, howver, attempting to scan a line
+// longer than `bufio.MaxScanTokenSize` will not result in an error,
+// but will return the long line.
+//
+// It is not necessary to check for errors by calling the Err method
+// until after scanning stops, when the Scan method returns false.
 type Scanner interface {
 	Bytes() []byte
 	Err() error
 	Scan() bool
+	Text() string
 	String() string
 }
 
@@ -19,22 +33,26 @@ type scanner struct {
 	err error
 }
 
+// NewScanner returns a scanner that reads from the specified
+// `io.Reader`.
 func NewScanner(r io.Reader) Scanner {
 	return &scanner{br: bufio.NewReader(r)}
 }
 
+// Bytes returns the byte slice that was just scanned.
 func (s scanner) Bytes() []byte {
 	return s.bs
 }
 
+// Err returns the error object associated with this scanner, or nil
+// if no errors have occurred.
 func (s scanner) Err() error {
 	return s.err
 }
 
-func (s scanner) String() string {
-	return string(s.bs)
-}
-
+// Scan will scan the text from the `io.Reader`, and return true if
+// scanning ought to continue or false if scanning is complete,
+// because of error or EOF. If true
 func (s *scanner) Scan() bool {
 	var isPrefix bool
 	s.bs, isPrefix, s.err = s.br.ReadLine()
@@ -67,4 +85,12 @@ func (s *scanner) Scan() bool {
 			return true
 		}
 	}
+}
+
+func (s scanner) String() string {
+	return string(s.bs)
+}
+
+func (s scanner) Text() string {
+	return string(s.bs)
 }
