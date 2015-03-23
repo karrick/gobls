@@ -87,10 +87,14 @@ func (s *scanner) Scan() bool {
 	}
 }
 
+// String returns the string representation of the byte slice returned
+// by the most recent Scan call.
 func (s scanner) String() string {
 	return string(s.bs)
 }
 
+// Text returns the string representation of the byte slice returned
+// by the most recent Scan call.
 func (s scanner) Text() string {
 	return string(s.bs)
 }
