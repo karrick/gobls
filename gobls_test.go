@@ -7,8 +7,10 @@ import (
 )
 
 const (
-	lineCount  = 100
-	lineLength = 1024
+	lineCount       = 100
+	shortLineLength = 100
+	avgLineLength   = 1024
+	longLineLength  = bufio.MaxScanTokenSize - 2
 )
 
 func makeBuffer(lineCount, lineLength int) *bytes.Buffer {
@@ -83,7 +85,7 @@ type simpleScanner interface {
 	Text() string
 }
 
-func benchmarkScanner(b *testing.B, makeScanner func(*bytes.Buffer) simpleScanner) {
+func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(*bytes.Buffer) simpleScanner) {
 	master := makeBuffer(lineCount, lineLength)
 	initial := master.Bytes()
 	var line string
@@ -103,16 +105,44 @@ func benchmarkScanner(b *testing.B, makeScanner func(*bytes.Buffer) simpleScanne
 	}
 }
 
-func BenchmarkBufioScanner(b *testing.B) {
+func BenchmarkBufioScannerAverage(b *testing.B) {
 	makeScanner := func(bb *bytes.Buffer) simpleScanner {
 		return bufio.NewScanner(bb)
 	}
-	benchmarkScanner(b, makeScanner)
+	benchmarkScanner(b, avgLineLength, makeScanner)
 }
 
-func BenchmarkGoblsScanner(b *testing.B) {
+func BenchmarkGoblsScannerAverage(b *testing.B) {
 	makeScanner := func(bb *bytes.Buffer) simpleScanner {
 		return NewScanner(bb)
 	}
-	benchmarkScanner(b, makeScanner)
+	benchmarkScanner(b, avgLineLength, makeScanner)
+}
+
+func BenchmarkBufioScannerShort(b *testing.B) {
+	makeScanner := func(bb *bytes.Buffer) simpleScanner {
+		return bufio.NewScanner(bb)
+	}
+	benchmarkScanner(b, shortLineLength, makeScanner)
+}
+
+func BenchmarkGoblsScannerShort(b *testing.B) {
+	makeScanner := func(bb *bytes.Buffer) simpleScanner {
+		return NewScanner(bb)
+	}
+	benchmarkScanner(b, shortLineLength, makeScanner)
+}
+
+func BenchmarkBufioScannerVeryLong(b *testing.B) {
+	makeScanner := func(bb *bytes.Buffer) simpleScanner {
+		return bufio.NewScanner(bb)
+	}
+	benchmarkScanner(b, longLineLength, makeScanner)
+}
+
+func BenchmarkGoblsScannerVeryLong(b *testing.B) {
+	makeScanner := func(bb *bytes.Buffer) simpleScanner {
+		return NewScanner(bb)
+	}
+	benchmarkScanner(b, longLineLength, makeScanner)
 }
