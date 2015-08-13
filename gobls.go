@@ -4,7 +4,18 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"sync"
 )
+
+// pool is a goroutine safe pool of very large buffers to use for long
+// lines.
+var pool sync.Pool
+
+func init() {
+	pool.New = func() interface{} {
+		return bytes.NewBuffer(make([]byte, 0, bufio.MaxScanTokenSize))
+	}
+}
 
 // Scanner provides an interface for reading newline-delimited lines
 // of text. It is similar to `bufio.Scanner`, but wraps
@@ -76,8 +87,17 @@ func (s *scanner) Scan() bool {
 	if !isPrefix {
 		return true
 	}
+
 	// here's a long line
-	buf := bytes.NewBuffer(s.bs)
+	buf := pool.Get().(*bytes.Buffer)
+	buf.Reset()
+	buf.Write(s.bs)
+	defer func() {
+		// need to copy data out before we return buf to pool
+		s.bs = make([]byte, 0, buf.Len())
+		s.bs = append(s.bs, buf.Bytes()...)
+		pool.Put(buf)
+	}()
 	for {
 		s.bs, isPrefix, s.err = s.br.ReadLine()
 		_, werr := buf.Write(s.bs)
@@ -92,7 +112,6 @@ func (s *scanner) Scan() bool {
 			return false
 		}
 		if !isPrefix {
-			s.bs = buf.Bytes()
 			return true
 		}
 	}
