@@ -2,6 +2,8 @@
 
 Gobls is a buffered line scanner for Go.
 
+[![GoDoc](https://godoc.org/github.com/karrick/gobls?status.svg)](https://godoc.org/github.com/karrick/gobls)
+
 ## Description
 
 Similar to `bufio.Scanner`, but wraps `bufio.ReadLine` so lines of

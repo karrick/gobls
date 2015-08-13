@@ -35,6 +35,17 @@ type scanner struct {
 
 // NewScanner returns a scanner that reads from the specified
 // `io.Reader`.
+//
+//    var lines, characters int
+//    ls := gobls.NewScanner(os.Stdin)
+//    for ls.Scan() {
+//        lines++
+//        characters += len(ls.Bytes())
+//    }
+//    if ls.Err() != nil {
+//        fmt.Fprintln(os.Stderr, "cannot scan:", ls.Err())
+//    }
+//    fmt.Println("Counted",lines,"and",characters,"characters.")
 func NewScanner(r io.Reader) Scanner {
 	return &scanner{br: bufio.NewReader(r)}
 }
