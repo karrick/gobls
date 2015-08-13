@@ -3,18 +3,9 @@ package gobls
 import (
 	"bufio"
 	"io"
-	"sync"
 )
 
-// pool is a goroutine safe pool of very large buffers to use for long
-// lines.
-var pool sync.Pool
-
-func init() {
-	pool.New = func() interface{} {
-		return make([]byte, 0, bufio.MaxScanTokenSize)
-	}
-}
+const InitialBufSize = 16 * 1024
 
 // Scanner provides an interface for reading newline-delimited lines
 // of text. It is similar to `bufio.Scanner`, but wraps
@@ -40,6 +31,7 @@ type Scanner interface {
 type scanner struct {
 	br  *bufio.Reader
 	bs  []byte
+	buf []byte
 	err error
 }
 
@@ -57,7 +49,10 @@ type scanner struct {
 //    }
 //    fmt.Println("Counted",lines,"and",characters,"characters.")
 func NewScanner(r io.Reader) Scanner {
-	return &scanner{br: bufio.NewReader(r)}
+	return &scanner{
+		br:  bufio.NewReader(r),
+		buf: make([]byte, 0, InitialBufSize),
+	}
 }
 
 // Bytes returns the byte slice that was just scanned.
@@ -87,24 +82,20 @@ func (s *scanner) Scan() bool {
 		return true
 	}
 
-	// here's a long line
-	buf := pool.Get().([]byte)
-	buf = append(buf[:0], s.bs...)
-	defer func() {
-		// need to copy data out before we return buf to pool
-		s.bs = append(make([]byte, 0, len(buf)), buf...)
-		pool.Put(buf)
-	}()
+	// found a long line
+	s.buf = append(s.buf[:0], s.bs...)
 	for {
 		s.bs, isPrefix, s.err = s.br.ReadLine()
-		buf = append(buf, s.bs...)
+		s.buf = append(s.buf, s.bs...)
 		if s.err != nil {
 			if s.err == io.EOF {
 				s.err = nil
 			}
+			s.bs = s.buf
 			return false
 		}
 		if !isPrefix {
+			s.bs = s.buf
 			return true
 		}
 	}
