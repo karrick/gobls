@@ -182,3 +182,10 @@ func BenchmarkGoblsScannerVeryLong(b *testing.B) {
 	}
 	benchmarkScanner(b, veryLongLineLength, makeScanner)
 }
+
+func BenchmarkGoblsScannerVeryLongEx(b *testing.B) {
+	makeScanner := func(bb *bytes.Buffer) simpleScanner {
+		return NewScannerSize(bb, bufio.MaxScanTokenSize)
+	}
+	benchmarkScanner(b, veryLongLineLength, makeScanner)
+}
