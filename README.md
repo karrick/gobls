@@ -29,7 +29,7 @@ reassemble the fragments into a single slice of bytes.
 
 ## Performance
 
-Gobls is within a few milliseconds as `bufio.Scanner` for most line
+Gobls is within a few microseconds of `bufio.Scanner` for most line
 lengths, imposing a slight performance penalty on the caller. For this
 reason, you really should just use `bufio.Scanner` unless your program
 must be able to parse lines that exceed a very large constant,
