@@ -60,14 +60,6 @@ func NewScanner(r io.Reader) Scanner {
 	return &scanner{br: bufio.NewReader(r)}
 }
 
-// NewScanner returns a scanner that reads from the specified
-// `io.Reader`, using internal buffers with at least the specified
-// size number of bytes. This is useful when you know the most common
-// line length.
-func NewScannerSize(r io.Reader, size int) Scanner {
-	return &scanner{br: bufio.NewReaderSize(r, size)}
-}
-
 // Bytes returns the byte slice that was just scanned.
 func (s scanner) Bytes() []byte {
 	return s.bs
