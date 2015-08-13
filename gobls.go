@@ -2,7 +2,6 @@ package gobls
 
 import (
 	"bufio"
-	"bytes"
 	"io"
 	"sync"
 )
@@ -13,7 +12,7 @@ var pool sync.Pool
 
 func init() {
 	pool.New = func() interface{} {
-		return bytes.NewBuffer(make([]byte, 0, bufio.MaxScanTokenSize))
+		return make([]byte, 0, bufio.MaxScanTokenSize)
 	}
 }
 
@@ -97,26 +96,20 @@ func (s *scanner) Scan() bool {
 	}
 
 	// here's a long line
-	buf := pool.Get().(*bytes.Buffer)
-	buf.Reset()
-	buf.Write(s.bs)
+	buf := pool.Get().([]byte)
+	buf = append(buf[:0], s.bs...)
 	defer func() {
 		// need to copy data out before we return buf to pool
-		s.bs = make([]byte, 0, buf.Len())
-		s.bs = append(s.bs, buf.Bytes()...)
+		s.bs = append(make([]byte, 0, len(buf)), buf...)
 		pool.Put(buf)
 	}()
 	for {
 		s.bs, isPrefix, s.err = s.br.ReadLine()
-		_, werr := buf.Write(s.bs)
+		buf = append(buf, s.bs...)
 		if s.err != nil {
 			if s.err == io.EOF {
 				s.err = nil
 			}
-			return false
-		}
-		if werr != nil {
-			s.err = werr
 			return false
 		}
 		if !isPrefix {
