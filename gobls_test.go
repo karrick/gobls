@@ -7,23 +7,22 @@ import (
 )
 
 const (
-	lineCount          = 100
+	lineCount          = 1000
 	shortLineLength    = 100
 	avgLineLength      = 1024
 	longLineLength     = 4096 - 2
 	veryLongLineLength = bufio.MaxScanTokenSize - 2
 )
 
-func makeBuffer(lineCount, lineLength int) *bytes.Buffer {
+func makeBytes(lineCount, lineLength int) []byte {
 	buf := make([]byte, 0, lineCount*(lineLength+2))
-	bb := bytes.NewBuffer(buf)
 	for line := 0; line < lineCount; line++ {
 		for i := 0; i < lineLength; i++ {
-			bb.WriteByte('a')
+			buf = append(buf, 'a')
 		}
-		bb.WriteString("\r\n")
+		buf = append(buf, '\r', '\n')
 	}
-	return bb
+	return buf
 }
 
 func TestNoEOF(t *testing.T) {
@@ -60,11 +59,11 @@ func TestSequencesThroughEntireBuffer(t *testing.T) {
 }
 
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
-	r := makeBuffer(1, longLineLength)
-	line := r.String()
+	buf := makeBytes(1, longLineLength)
+	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
-	s := NewScanner(r)
+	s := NewScanner(bytes.NewBuffer(buf))
 	lines := make([]string, 0, 1)
 	for s.Scan() {
 		lines = append(lines, s.String())
@@ -81,11 +80,11 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 }
 
 func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
-	r := makeBuffer(1, bufio.MaxScanTokenSize+5)
-	line := r.String()
+	buf := makeBytes(1, bufio.MaxScanTokenSize+5)
+	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
-	s := NewScanner(r)
+	s := NewScanner(bytes.NewBuffer(buf))
 	lines := make([]string, 0, 1)
 	for s.Scan() {
 		lines = append(lines, s.String())
@@ -108,18 +107,17 @@ type simpleScanner interface {
 }
 
 func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(*bytes.Buffer) simpleScanner) {
-	master := makeBuffer(lineCount, lineLength)
-	initial := master.Bytes()
+	master := makeBytes(lineCount, lineLength)
 	var line []byte
+	s := makeScanner(bytes.NewBuffer(master))
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		s := makeScanner(bytes.NewBuffer(initial))
 		for s.Scan() {
 			line = s.Bytes()
 		}
-		if s.Err() != nil {
-			b.Fatal("Actual: %#v; Expected: %#v", s.Err(), nil)
+		if err := s.Err(); err != nil {
+			b.Fatal("Actual: %#v; Expected: %#v", err, nil)
 		}
 	}
 	if len(line) != lineLength {
@@ -179,13 +177,6 @@ func BenchmarkBufioScannerVeryLong(b *testing.B) {
 func BenchmarkGoblsScannerVeryLong(b *testing.B) {
 	makeScanner := func(bb *bytes.Buffer) simpleScanner {
 		return NewScanner(bb)
-	}
-	benchmarkScanner(b, veryLongLineLength, makeScanner)
-}
-
-func BenchmarkGoblsScannerVeryLongEx(b *testing.B) {
-	makeScanner := func(bb *bytes.Buffer) simpleScanner {
-		return NewScannerSize(bb, bufio.MaxScanTokenSize)
 	}
 	benchmarkScanner(b, veryLongLineLength, makeScanner)
 }
