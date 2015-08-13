@@ -117,7 +117,7 @@ func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(*bytes.Buff
 			line = s.Bytes()
 		}
 		if err := s.Err(); err != nil {
-			b.Fatal("Actual: %#v; Expected: %#v", err, nil)
+			b.Fatalf("Actual: %#v; Expected: %#v", err, nil)
 		}
 	}
 	if len(line) != lineLength {
