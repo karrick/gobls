@@ -26,36 +26,42 @@ func makeBytes(lineCount, lineLength int) []byte {
 }
 
 func TestNoEOF(t *testing.T) {
-	bb := bytes.NewBufferString("")
-	s := NewScanner(bb)
-	for s.Scan() {
-		t.Errorf("Actual: scan returned true; Expected: false")
+	test := func(s simpleScanner) {
+		for s.Scan() {
+			t.Errorf("Actual: scan returned true; Expected: false")
+		}
+		if s.Err() != nil {
+			t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
+		}
 	}
-	if s.Err() != nil {
-		t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
-	}
+
+	test(NewScanner(bytes.NewBufferString("")))
+	test(bufio.NewScanner(bytes.NewBufferString("")))
 }
 
 func TestSequencesThroughEntireBuffer(t *testing.T) {
-	bb := bytes.NewBufferString("flubber\nblubber\nfoo")
-	s := NewScanner(bb)
-	expectedLines := []string{"flubber", "blubber", "foo"}
-	actualLines := make([]string, 0)
-	for s.Scan() {
-		actualLines = append(actualLines, s.String())
-	}
-	if s.Err() != nil {
-		t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
-	}
-	if len(actualLines) != len(expectedLines) {
-		t.Fatalf("Actual: %#v; Expected: %#v", len(actualLines), len(expectedLines))
-	}
-	for i := 0; i < len(expectedLines); i++ {
-		if actualLines[i] != expectedLines[i] {
-			t.Errorf("Actual: %#v; Expected: %#v",
-				actualLines[i], expectedLines[i])
+	test := func(s simpleScanner) {
+		expectedLines := []string{"flubber", "blubber", "foo"}
+		actualLines := make([]string, 0)
+		for s.Scan() {
+			actualLines = append(actualLines, s.Text())
+		}
+		if s.Err() != nil {
+			t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
+		}
+		if len(actualLines) != len(expectedLines) {
+			t.Fatalf("Actual: %#v; Expected: %#v", len(actualLines), len(expectedLines))
+		}
+		for i := 0; i < len(expectedLines); i++ {
+			if actualLines[i] != expectedLines[i] {
+				t.Errorf("Actual: %#v; Expected: %#v",
+					actualLines[i], expectedLines[i])
+			}
 		}
 	}
+
+	test(NewScanner(bytes.NewBufferString("flubber\nblubber\nfoo")))
+	test(bufio.NewScanner(bytes.NewBufferString("flubber\nblubber\nfoo")))
 }
 
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
@@ -63,20 +69,24 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
-	s := NewScanner(bytes.NewBuffer(buf))
-	lines := make([]string, 0, 1)
-	for s.Scan() {
-		lines = append(lines, s.String())
+	test := func(s simpleScanner) {
+		lines := make([]string, 0, 1)
+		for s.Scan() {
+			lines = append(lines, s.Text())
+		}
+		if s.Err() != nil {
+			t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
+		}
+		if len(lines) != 1 {
+			t.Fatalf("Actual: %#v; Expected: %#v", len(lines), 1)
+		}
+		if lines[0] != line {
+			t.Errorf("Actual: %#v; Expected: %#v", lines[0], line)
+		}
 	}
-	if s.Err() != nil {
-		t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
-	}
-	if len(lines) != 1 {
-		t.Fatalf("Actual: %#v; Expected: %#v", len(lines), 1)
-	}
-	if lines[0] != line {
-		t.Errorf("Actual: %#v; Expected: %#v", lines[0], line)
-	}
+
+	test(NewScanner(bytes.NewBuffer(buf)))
+	test(bufio.NewScanner(bytes.NewBuffer(buf)))
 }
 
 func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
@@ -84,26 +94,31 @@ func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
 	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
-	s := NewScanner(bytes.NewBuffer(buf))
-	lines := make([]string, 0, 1)
-	for s.Scan() {
-		lines = append(lines, s.String())
+	test := func(s simpleScanner) {
+		lines := make([]string, 0, 1)
+		for s.Scan() {
+			lines = append(lines, s.Text())
+		}
+		if s.Err() != nil {
+			t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
+		}
+		if len(lines) != 1 {
+			t.Fatalf("Actual: %#v; Expected: %#v", len(lines), 1)
+		}
+		if lines[0] != line {
+			t.Errorf("Actual: %#v; Expected: %#v", lines[0], line)
+		}
 	}
-	if s.Err() != nil {
-		t.Errorf("Actual: %#v; Expected: %#v", s.Err(), nil)
-	}
-	if len(lines) != 1 {
-		t.Fatalf("Actual: %#v; Expected: %#v", len(lines), 1)
-	}
-	if lines[0] != line {
-		t.Errorf("Actual: %#v; Expected: %#v", lines[0], line)
-	}
+
+	test(NewScanner(bytes.NewBuffer(buf)))
+	// test(bufio.NewScanner(bytes.NewBuffer(buf))) // err = token too long
 }
 
 type simpleScanner interface {
 	Err() error
 	Scan() bool
 	Bytes() []byte
+	Text() string
 }
 
 func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(*bytes.Buffer) simpleScanner) {
