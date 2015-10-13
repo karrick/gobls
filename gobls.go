@@ -1,5 +1,7 @@
 package gobls
 
+// DefaultBufferSize specifies the initial bytes size each gobls scanner will allocate to be used
+// for aggregation of line fragments.
 const DefaultBufferSize = 16 * 1024
 
 // Scanner provides an interface for reading newline-delimited lines
