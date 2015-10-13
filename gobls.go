@@ -1,9 +1,6 @@
 package gobls
 
-import "bufio"
-
-// const DefaultBufferSize = 16 * 1024
-const DefaultBufferSize = bufio.MaxScanTokenSize
+const DefaultBufferSize = 16 * 1024
 
 // Scanner provides an interface for reading newline-delimited lines
 // of text. It is similar to `bufio.Scanner`, but wraps
