@@ -42,7 +42,7 @@ func TestNoEOF(t *testing.T) {
 
 func TestSequencesThroughEntireBuffer(t *testing.T) {
 	test := func(expected []string, s Scanner) {
-		actualLines := make([]string, 0)
+		var actualLines []string
 		for s.Scan() {
 			actualLines = append(actualLines, s.Text())
 		}
