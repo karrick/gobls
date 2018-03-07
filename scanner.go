@@ -56,6 +56,7 @@ func (s *scanner) Scan() bool {
 		}
 		return false
 	}
+
 	if !isPrefix {
 		return true
 	}
