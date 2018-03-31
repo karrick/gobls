@@ -12,9 +12,9 @@ type scanner struct {
 	err error
 }
 
-// NewScanner returns a scanner that reads from the specified `io.Reader`.  It allocates a scanning
-// buffer with the default buffer size.  This per-scanner buffer will grow to accomodate extremely
-// long lines.
+// NewScanner returns a scanner that reads from the specified `io.Reader`.  It
+// allocates a scanning buffer with the default buffer size.  This per-scanner
+// buffer will grow to accomodate extremely long lines.
 //
 //    var lines, characters int
 //    ls := gobls.NewScanner(os.Stdin)
@@ -38,15 +38,15 @@ func (s scanner) Bytes() []byte {
 	return s.bs
 }
 
-// Err returns the error object associated with this scanner, or nil
-// if no errors have occurred.
+// Err returns the error object associated with this scanner, or nil if no
+// errors have occurred.
 func (s scanner) Err() error {
 	return s.err
 }
 
-// Scan will scan the text from the `io.Reader`, and return true if
-// scanning ought to continue or false if scanning is complete,
-// because of error or EOF. If true
+// Scan will scan the text from the `io.Reader`, and return true if scanning
+// ought to continue or false if scanning is complete, because of error or
+// EOF. If true
 func (s *scanner) Scan() bool {
 	var isPrefix bool
 	s.bs, isPrefix, s.err = s.br.ReadLine()
@@ -80,14 +80,14 @@ func (s *scanner) Scan() bool {
 	}
 }
 
-// String returns the string representation of the byte slice returned
-// by the most recent Scan call.  DEPRECATED:  Use the Text method.
+// String returns the string representation of the byte slice returned by the
+// most recent Scan call.  DEPRECATED: Use the Text method.
 func (s scanner) String() string {
 	return string(s.bs)
 }
 
-// Text returns the string representation of the byte slice returned
-// by the most recent Scan call.
+// Text returns the string representation of the byte slice returned by the most
+// recent Scan call.
 func (s scanner) Text() string {
 	return string(s.bs)
 }
