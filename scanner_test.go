@@ -65,6 +65,31 @@ func TestSequencesThroughEntireBuffer(t *testing.T) {
 	test(expected, NewScanner(bytes.NewBufferString(corpus)))
 }
 
+func TestSequencesThroughEntireBufferCRLF(t *testing.T) {
+	test := func(expected []string, s Scanner) {
+		var actualLines []string
+		for s.Scan() {
+			actualLines = append(actualLines, s.Text())
+		}
+		if actual, want := s.Err(), error(nil); actual != want {
+			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		}
+		if actual, want := len(actualLines), len(expected); actual != want {
+			t.Fatalf("Actual: %#v; Expected: %#v", actual, want)
+		}
+		for i := 0; i < len(expected); i++ {
+			if actual, want := actualLines[i], expected[i]; actual != want {
+				t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+			}
+		}
+	}
+
+	corpus := "flubber\r\nblubber\r\nfoo"
+	expected := []string{"flubber", "blubber", "foo"}
+	test(expected, bufio.NewScanner(bytes.NewBufferString(corpus)))
+	test(expected, NewScanner(bytes.NewBufferString(corpus)))
+}
+
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
 	buf := makeBuffer(1, longLineLength)
 	line := string(buf)
