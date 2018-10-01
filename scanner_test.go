@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	shortLineLength    = 100 - 2
+	shortLineLength    = 64 - 2
 	avgLineLength      = 1024 - 2
 	longLineLength     = 4096 - 2
 	veryLongLineLength = bufio.MaxScanTokenSize - 2
@@ -18,20 +18,50 @@ func makeBuffer(lineCount, lineLength int) []byte {
 	buf := make([]byte, 0, lineCount*(lineLength+2))
 	for line := 0; line < lineCount; line++ {
 		for i := 0; i < lineLength; i++ {
-			buf = append(buf, 'a')
+			switch i % 10 {
+			case 0:
+				buf = append(buf, byte((i/10)%10+'0'))
+			default:
+				// buf = append(buf, '.')
+				buf = append(buf, byte(i%10+'a'))
+			}
 		}
 		buf = append(buf, '\r', '\n')
 	}
 	return buf
 }
 
+func TestCopy(t *testing.T) {
+	buf := []byte("abcdefghijklmnopqrstuvwxyz")
+	l := 20
+	r := len(buf)
+	// t.Logf("buf: %q", buf)
+	nc := copy(buf, buf[l:r])
+	if got, want := nc, 6; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	l = 0
+	r = nc
+	if got, want := l, 0; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := r, 6; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	buf = buf[l:r]
+	if got, want := string(buf), "uvwxyz"; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	// t.Logf("buf: %q", buf)
+}
+
 func TestNoEOF(t *testing.T) {
 	test := func(s Scanner) {
-		if actual, want := s.Scan(), false; actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := s.Scan(), false; got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := s.Err(), error(nil); actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := s.Err(), error(nil); got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
 	}
 
@@ -42,52 +72,36 @@ func TestNoEOF(t *testing.T) {
 
 func TestSequencesThroughEntireBuffer(t *testing.T) {
 	test := func(expected []string, s Scanner) {
-		var actualLines []string
+		var gotLines []string
 		for s.Scan() {
-			actualLines = append(actualLines, s.Text())
+			gotLines = append(gotLines, s.Text())
 		}
-		if actual, want := s.Err(), error(nil); actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := s.Err(), error(nil); got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := len(actualLines), len(expected); actual != want {
-			t.Fatalf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := len(gotLines), len(expected); got != want {
+			t.Fatalf("GOT: %v; WANT: %v", got, want)
 		}
 		for i := 0; i < len(expected); i++ {
-			if actual, want := actualLines[i], expected[i]; actual != want {
-				t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+			if got, want := gotLines[i], expected[i]; got != want {
+				t.Errorf("GOT: %v; WANT: %v", got, want)
 			}
 		}
 	}
 
-	corpus := "flubber\nblubber\nfoo"
-	expected := []string{"flubber", "blubber", "foo"}
-	test(expected, bufio.NewScanner(bytes.NewBufferString(corpus)))
-	test(expected, NewScanner(bytes.NewBufferString(corpus)))
-}
+	t.Run("LF", func(t *testing.T) {
+		corpus := "flubber\nblubber\nfoo"
+		expected := []string{"flubber", "blubber", "foo"}
+		test(expected, bufio.NewScanner(bytes.NewBufferString(corpus)))
+		test(expected, NewScanner(bytes.NewBufferString(corpus)))
+	})
 
-func TestSequencesThroughEntireBufferCRLF(t *testing.T) {
-	test := func(expected []string, s Scanner) {
-		var actualLines []string
-		for s.Scan() {
-			actualLines = append(actualLines, s.Text())
-		}
-		if actual, want := s.Err(), error(nil); actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
-		}
-		if actual, want := len(actualLines), len(expected); actual != want {
-			t.Fatalf("Actual: %#v; Expected: %#v", actual, want)
-		}
-		for i := 0; i < len(expected); i++ {
-			if actual, want := actualLines[i], expected[i]; actual != want {
-				t.Errorf("Actual: %#v; Expected: %#v", actual, want)
-			}
-		}
-	}
-
-	corpus := "flubber\r\nblubber\r\nfoo"
-	expected := []string{"flubber", "blubber", "foo"}
-	test(expected, bufio.NewScanner(bytes.NewBufferString(corpus)))
-	test(expected, NewScanner(bytes.NewBufferString(corpus)))
+	t.Run("CRLF", func(t *testing.T) {
+		corpus := "flubber\r\nblubber\r\nfoo"
+		expected := []string{"flubber", "blubber", "foo"}
+		test(expected, bufio.NewScanner(bytes.NewBufferString(corpus)))
+		test(expected, NewScanner(bytes.NewBufferString(corpus)))
+	})
 }
 
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
@@ -100,14 +114,14 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 		for s.Scan() {
 			lines = append(lines, s.Text())
 		}
-		if actual, want := s.Err(), error(nil); actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := s.Err(), error(nil); got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := len(lines), 1; actual != want {
-			t.Fatalf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := len(lines), 1; got != want {
+			t.Fatalf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := lines[0], line; actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := lines[0], line; got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
 	}
 
@@ -120,99 +134,157 @@ func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
 	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
-	test := func(s Scanner) {
+	t.Run("bufio", func(t *testing.T) {
+		// Expect bufio to yield error when scanning a line with more bytes than
+		// bufio.MaxScanTokenSize.
+		s := bufio.NewScanner(bytes.NewReader(buf))
+		if got, want := s.Scan(), false; got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
+		}
+		if got, want := s.Err(), bufio.ErrTooLong; got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
+		}
+	})
+
+	t.Run("gobls", func(t *testing.T) {
 		lines := make([]string, 0, 1)
+		s := NewScanner(bytes.NewReader(buf))
 		for s.Scan() {
 			lines = append(lines, s.Text())
 		}
-		if actual, want := s.Err(), error(nil); actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := s.Err(), error(nil); got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := len(lines), 1; actual != want {
-			t.Fatalf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := len(lines), 1; got != want {
+			t.Fatalf("GOT: %v; WANT: %v", got, want)
 		}
-		if actual, want := lines[0], line; actual != want {
-			t.Errorf("Actual: %#v; Expected: %#v", actual, want)
+		if got, want := lines[0], line; got != want {
+			t.Errorf("GOT: %v; WANT: %v", got, want)
 		}
-	}
-
-	// test(bufio.NewScanner(bytes.NewReader(buf))) // bufio will return err = token too long
-	test(NewScanner(bytes.NewReader(buf)))
-}
-
-func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(io.Reader) Scanner) {
-	wanted := makeBuffer(1, lineLength)
-	wanted = wanted[:len(wanted)-2] // trim CRLF
-
-	// NOTE: make buffer with line count set to b.N
-	s := makeScanner(bytes.NewReader(makeBuffer(b.N, lineLength)))
-
-	var line []byte
-	var count int
-
-	b.ResetTimer()
-	for s.Scan() {
-		line = s.Bytes()
-		count++
-	}
-
-	if actual, want := s.Err(), error(nil); actual != want {
-		b.Errorf("Actual: %#v; Expected: %#v", actual, want)
-	}
-	// NOTE: ensure proper number of lines scanned
-	if actual, want := count, b.N; actual != want {
-		b.Errorf("Actual: %#v; Expected: %#v", actual, want)
-	}
-	// NOTE: test line contents to prevent compiler optimization from eliding call to s.Bytes()
-	if !bytes.Equal(line, wanted) {
-		b.Fatalf("Actual: %#v; Expected: %#v", line, wanted)
-	}
-}
-
-func BenchmarkScannerAverageBufio(b *testing.B) {
-	benchmarkScanner(b, avgLineLength, func(r io.Reader) Scanner {
-		return bufio.NewScanner(r)
 	})
 }
 
-func BenchmarkScannerAverageGobls(b *testing.B) {
-	benchmarkScanner(b, avgLineLength, func(r io.Reader) Scanner {
-		return NewScanner(r)
+func testScanner(tb testing.TB, lineCount, lineLength int, makeScanner func(io.Reader) Scanner) {
+	tb.Helper()
+
+	// Every line ought look like the following
+	wanted := makeBuffer(1, lineLength)[:lineLength] // trim CRLF from tail of line
+
+	s := makeScanner(bytes.NewReader(makeBuffer(lineCount, lineLength)))
+
+	var count int
+	var line []byte
+
+	if b, ok := tb.(*testing.B); ok {
+		b.ResetTimer()
+		b.ReportAllocs()
+	}
+
+	for s.Scan() {
+		count++
+		line = s.Bytes()
+	}
+
+	if got, want := s.Err(), error(nil); got != want {
+		tb.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+
+	if got, want := count, lineCount; got != want {
+		tb.Errorf("GOT: %v; GOT: %d", got, want)
+	}
+
+	if !bytes.Equal(line, wanted) {
+		tb.Fatalf("GOT: %v; WANT: %v", string(line), string(wanted))
+	}
+}
+
+func TestExtremelyLongLine(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	const lineCount = 100
+	const lineSize = bufio.MaxScanTokenSize + 2
+
+	t.Run("bufio", func(t *testing.T) {
+		t.Skip("bufio.Scanner cannot process lines with more than bufio.MaxScanTokenSize bytes")
+		testScanner(t, lineCount, lineSize, func(r io.Reader) Scanner {
+			return bufio.NewScanner(r)
+		})
+	})
+
+	t.Run("gobls", func(t *testing.T) {
+		testScanner(t, lineCount, lineSize, func(r io.Reader) Scanner {
+			return NewScanner(r)
+		})
+	})
+}
+
+func TestExtremelyManyLines(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	const lineCount = 50000000
+	const lineSize = 50
+
+	t.Run("bufio", func(t *testing.T) {
+		testScanner(t, lineCount, lineSize, func(r io.Reader) Scanner {
+			return bufio.NewScanner(r)
+		})
+	})
+
+	t.Run("gobls", func(t *testing.T) {
+		testScanner(t, lineCount, lineSize, func(r io.Reader) Scanner {
+			return NewScanner(r)
+		})
 	})
 }
 
 func BenchmarkScannerShortBufio(b *testing.B) {
-	benchmarkScanner(b, shortLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, shortLineLength, func(r io.Reader) Scanner {
 		return bufio.NewScanner(r)
 	})
 }
 
 func BenchmarkScannerShortGobls(b *testing.B) {
-	benchmarkScanner(b, shortLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, shortLineLength, func(r io.Reader) Scanner {
+		return NewScanner(r)
+	})
+}
+
+func BenchmarkScannerAverageBufio(b *testing.B) {
+	testScanner(b, b.N, avgLineLength, func(r io.Reader) Scanner {
+		return bufio.NewScanner(r)
+	})
+}
+
+func BenchmarkScannerAverageGobls(b *testing.B) {
+	testScanner(b, b.N, avgLineLength, func(r io.Reader) Scanner {
 		return NewScanner(r)
 	})
 }
 
 func BenchmarkScannerLongBufio(b *testing.B) {
-	benchmarkScanner(b, longLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, longLineLength, func(r io.Reader) Scanner {
 		return bufio.NewScanner(r)
 	})
 }
 
 func BenchmarkScannerLongGobls(b *testing.B) {
-	benchmarkScanner(b, longLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, longLineLength, func(r io.Reader) Scanner {
 		return NewScanner(r)
 	})
 }
 
 func BenchmarkScannerVeryLongBufio(b *testing.B) {
-	benchmarkScanner(b, veryLongLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, veryLongLineLength, func(r io.Reader) Scanner {
 		return bufio.NewScanner(r)
 	})
 }
 
 func BenchmarkScannerVeryLongGobls(b *testing.B) {
-	benchmarkScanner(b, veryLongLineLength, func(r io.Reader) Scanner {
+	testScanner(b, b.N, veryLongLineLength, func(r io.Reader) Scanner {
 		return NewScanner(r)
 	})
 }
