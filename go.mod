@@ -1,1 +1,1 @@
-module "github.com/karrick/gobls"
+module github.com/karrick/gobls
