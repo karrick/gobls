@@ -77,7 +77,12 @@ func ExampleResponseScan() {
 	// Output: 0|1|2|3|4|5|
 }
 
-func scanit(r *response) []string {
+type scannerI interface {
+     Scan() bool
+     Text() string
+}
+
+func scanit(r scannerI) []string {
 	var values []string
 	for r.Scan() {
 		values = append(values, r.Text())
@@ -147,6 +152,20 @@ func testScanLarge(tb testing.TB) {
 	}
 }
 
+func testScanReaderLarge(tb testing.TB) {
+    s := NewScanner(bytes.NewReader(benchmarkLongResponse))
+	values := scanit(s)
+	if got, want := len(values), benchmarkCount; got != want {
+		tb.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := values[0], "0"; got != want {
+		tb.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := values[len(values)-1], strconv.FormatInt(benchmarkCount-1, 16); got != want {
+		tb.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+}
+
 func testSplitLarge(tb testing.TB) {
 	r := &response{buf: benchmarkLongResponse}
 	values := r.Split()
@@ -158,6 +177,17 @@ func testSplitLarge(tb testing.TB) {
 	}
 	if got, want := values[len(values)-1], strconv.FormatInt(benchmarkCount-1, 16); got != want {
 		tb.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+}
+
+func BenchmarkResponseScanReaderLarge(b *testing.B) {
+	setupLongResponse()
+	b.ResetTimer()
+
+	if benchmarkLongResponse != nil {
+		for i := 0; i < b.N; i++ {
+			testScanReaderLarge(b)
+		}
 	}
 }
 
