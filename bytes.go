@@ -48,11 +48,11 @@ func (r *response) Scan() bool {
 	if len(r.buf) == 0 {
 		return false
 	}
-    if i := bytes.IndexByte(r.buf, '\n'); i >= 0 {
+	if i := bytes.IndexByte(r.buf, '\n'); i >= 0 {
 		r.entry = r.buf[:i]
 		r.buf = r.buf[i+1:]
 		return true
-    }
+	}
 	r.entry = r.buf
 	r.buf = nil
 	return true

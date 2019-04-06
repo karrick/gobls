@@ -78,8 +78,8 @@ func ExampleResponseScan() {
 }
 
 type scannerI interface {
-     Scan() bool
-     Text() string
+	Scan() bool
+	Text() string
 }
 
 func scanit(r scannerI) []string {
@@ -127,14 +127,14 @@ var benchmarkLongValues []string
 
 func setupLongResponse() {
 	if benchmarkLongResponse == nil {
-        benchmarkLongValues = make([]string, benchmarkCount)
+		benchmarkLongValues = make([]string, benchmarkCount)
 		for i := int64(0); i < benchmarkCount; i++ {
-            v := strconv.FormatInt(i, 16)
-            benchmarkLongValues[i] = v
-		    benchmarkLongResponse = append(benchmarkLongResponse, v + "\n"...)
+			v := strconv.FormatInt(i, 16)
+			benchmarkLongValues[i] = v
+			benchmarkLongResponse = append(benchmarkLongResponse, v+"\n"...)
 		}
-        // Trim final newline from byte slice.
-        benchmarkLongResponse = benchmarkLongResponse[:len(benchmarkLongResponse)-1]
+		// Trim final newline from byte slice.
+		benchmarkLongResponse = benchmarkLongResponse[:len(benchmarkLongResponse)-1]
 	}
 }
 
@@ -153,7 +153,7 @@ func testScanLarge(tb testing.TB) {
 }
 
 func testScanReaderLarge(tb testing.TB) {
-    s := NewScanner(bytes.NewReader(benchmarkLongResponse))
+	s := NewScanner(bytes.NewReader(benchmarkLongResponse))
 	values := scanit(s)
 	if got, want := len(values), benchmarkCount; got != want {
 		tb.Fatalf("GOT: %v; WANT: %v", got, want)
