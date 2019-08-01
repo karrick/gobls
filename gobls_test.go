@@ -74,7 +74,7 @@ func ensureSequence(tb testing.TB, s Scanner, seq []string) {
 func TestEmpty(t *testing.T) {
 	corpus := ""
 	ensureSequence(t, bufio.NewScanner(bytes.NewBufferString(corpus)), nil)
-	ensureSequence(t, newBufferScanner([]byte(corpus)), nil)
+	ensureSequence(t, NewBufferScanner([]byte(corpus)), nil)
 }
 
 func TestSequencesThroughEntireBuffer(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSequencesThroughEntireBuffer(t *testing.T) {
 
 	ensureSequence(t, bufio.NewScanner(bytes.NewBufferString(corpus)), want)
 	ensureSequence(t, NewScanner(bytes.NewBufferString(corpus)), want)
-	ensureSequence(t, newBufferScanner([]byte(corpus)), want)
+	ensureSequence(t, NewBufferScanner([]byte(corpus)), want)
 }
 
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
@@ -109,7 +109,7 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 
 	test(bufio.NewScanner(bytes.NewReader(buf)))
 	test(NewScanner(bytes.NewReader(buf)))
-	test(newBufferScanner([]byte(buf)))
+	test(NewBufferScanner([]byte(buf)))
 }
 
 func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
@@ -135,7 +135,7 @@ func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
 
 	// test(bufio.NewScanner(bytes.NewReader(buf))) // bufio will return err = token too long
 	test(NewScanner(bytes.NewReader(buf)))
-	test(newBufferScanner([]byte(buf)))
+	test(NewBufferScanner([]byte(buf)))
 }
 
 func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(buf []byte) Scanner) {
@@ -181,9 +181,9 @@ func BenchmarkScannerAverage(b *testing.B) {
 			return NewScanner(bytes.NewReader(buf))
 		})
 	})
-	b.Run("reader", func(b *testing.B) {
+	b.Run("buffer", func(b *testing.B) {
 		benchmarkScanner(b, avgLineLength, func(buf []byte) Scanner {
-			return newBufferScanner(buf)
+			return NewBufferScanner(buf)
 		})
 	})
 }
@@ -199,6 +199,11 @@ func BenchmarkScannerShort(b *testing.B) {
 			return NewScanner(bytes.NewReader(buf))
 		})
 	})
+	b.Run("buffer", func(b *testing.B) {
+		benchmarkScanner(b, shortLineLength, func(buf []byte) Scanner {
+			return NewBufferScanner(buf)
+		})
+	})
 }
 
 func BenchmarkScannerLong(b *testing.B) {
@@ -212,6 +217,11 @@ func BenchmarkScannerLong(b *testing.B) {
 			return NewScanner(bytes.NewReader(buf))
 		})
 	})
+	b.Run("buffer", func(b *testing.B) {
+		benchmarkScanner(b, longLineLength, func(buf []byte) Scanner {
+			return NewBufferScanner(buf)
+		})
+	})
 }
 
 func BenchmarkScannerVeryLong(b *testing.B) {
@@ -223,6 +233,11 @@ func BenchmarkScannerVeryLong(b *testing.B) {
 	b.Run("reader", func(b *testing.B) {
 		benchmarkScanner(b, veryLongLineLength, func(buf []byte) Scanner {
 			return NewScanner(bytes.NewReader(buf))
+		})
+	})
+	b.Run("buffer", func(b *testing.B) {
+		benchmarkScanner(b, veryLongLineLength, func(buf []byte) Scanner {
+			return NewBufferScanner(buf)
 		})
 	})
 }
