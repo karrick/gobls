@@ -46,7 +46,7 @@ func (s scanner) Err() error {
 
 // Scan will scan the text from the `io.Reader`, and return true if scanning
 // ought to continue or false if scanning is complete, because of error or
-// EOF. If true
+// EOF.
 func (s *scanner) Scan() bool {
 	var isPrefix bool
 	s.bs, isPrefix, s.err = s.br.ReadLine()
