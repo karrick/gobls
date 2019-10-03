@@ -63,7 +63,7 @@ func (b *BufferScanner) Scan() bool {
 		b.left = b.right + 1
 	}
 
-	next := bytes.IndexRune(b.buf[b.left:], '\n')
+	next := bytes.IndexByte(b.buf[b.left:], '\n')
 
 	if next == -1 {
 		b.done = true
