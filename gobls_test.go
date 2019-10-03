@@ -76,7 +76,24 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 	testSequenceBuffer(t, buf, want)
 }
 
+func TestHandlesLinesLongerThanBuffer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping long buffer")
+	}
+	buf := makeBuffer(1, 8192)
+	line := string(buf)
+	line = line[:len(line)-2] // trim final CRLF
+	want := []string{line}
+
+	testSequenceBufio(t, buf, want)
+	testSequenceScanner(t, buf, want)
+	testSequenceBuffer(t, buf, want)
+}
+
 func TestExcessivelyLongLinesRequireSingleInvocation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping long buffer")
+	}
 	buf := makeBuffer(1, bufio.MaxScanTokenSize+5)
 	line := string(buf)
 	line = line[:len(line)-2] // trim final CRLF
