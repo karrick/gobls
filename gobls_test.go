@@ -113,7 +113,7 @@ func TestScannerSingleByte(t *testing.T) {
 		want := []string{""}
 
 		testSequenceBufio(t, buf, want)
-		// testSequenceScanner(t, buf, want)
+		testSequenceScanner(t, buf, want)
 		testSequenceBuffer(t, buf, want)
 	})
 	t.Run("other", func(t *testing.T) {
@@ -127,66 +127,65 @@ func TestScannerSingleByte(t *testing.T) {
 }
 
 func TestScannerSingleLine(t *testing.T) {
-	t.Run("single line", func(t *testing.T) {
-		t.Run("with newline", func(t *testing.T) {
-			buf := []byte("line1\n")
-			want := []string{"line1"}
+	t.Run("with newline", func(t *testing.T) {
+		buf := []byte("line1\n")
+		want := []string{"line1"}
 
-			testSequenceBufio(t, buf, want)
-			testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
-		t.Run("with carriage return", func(t *testing.T) {
-			buf := []byte("line1\r")
-			want := []string{"line1"}
-
-			testSequenceBufio(t, buf, want)
-			// testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
-		t.Run("with both", func(t *testing.T) {
-			buf := []byte("line1\r\n")
-			want := []string{"line1"}
-
-			testSequenceBufio(t, buf, want)
-			testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
-		t.Run("with neither", func(t *testing.T) {
-			buf := []byte("line1")
-			want := []string{"line1"}
-
-			testSequenceBufio(t, buf, want)
-			testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
 	})
-	t.Run("double line", func(t *testing.T) {
-		t.Run("with trailing newline", func(t *testing.T) {
-			buf := []byte("line1\nline2\n")
-			want := []string{"line1", "line2"}
+	t.Run("with carriage return", func(t *testing.T) {
+		buf := []byte("line1\r")
+		want := []string{"line1"}
 
-			testSequenceBufio(t, buf, want)
-			testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
-		t.Run("with trailing carriage return", func(t *testing.T) {
-			// NOTE: Because carriage returns are ignored rather than marking
-			// the end of a line, this source buffer returns a single line.
-			buf := []byte("line1\rline2\r")
-			want := []string{"line1\rline2"}
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("with both", func(t *testing.T) {
+		buf := []byte("line1\r\n")
+		want := []string{"line1"}
 
-			testSequenceBufio(t, buf, want)
-			// testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
-		t.Run("with trailing both", func(t *testing.T) {
-			buf := []byte("line1\r\nline2\r\n")
-			want := []string{"line1", "line2"}
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("with neither", func(t *testing.T) {
+		buf := []byte("line1")
+		want := []string{"line1"}
 
-			testSequenceBufio(t, buf, want)
-			testSequenceScanner(t, buf, want)
-			testSequenceBuffer(t, buf, want)
-		})
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+}
+
+func TestScannerDoubleLine(t *testing.T) {
+	t.Run("with trailing newline", func(t *testing.T) {
+		buf := []byte("line1\nline2\n")
+		want := []string{"line1", "line2"}
+
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("with trailing carriage return", func(t *testing.T) {
+		// NOTE: Because carriage returns are ignored rather than marking
+		// the end of a line, this source buffer returns a single line.
+		buf := []byte("line1\rline2\r")
+		want := []string{"line1\rline2"}
+
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("with trailing both", func(t *testing.T) {
+		buf := []byte("line1\r\nline2\r\n")
+		want := []string{"line1", "line2"}
+
+		testSequenceBufio(t, buf, want)
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
 	})
 }

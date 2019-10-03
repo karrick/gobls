@@ -6,10 +6,10 @@ import (
 )
 
 type scanner struct {
-	br  *bufio.Reader
-	bs  []byte
-	buf []byte
-	err error
+	br          *bufio.Reader
+	buf         []byte // points within br's buffer
+	longLineBuf []byte // our accumulation for long lines
+	err         error
 }
 
 // NewScanner returns a scanner that reads from the specified `io.Reader`.  It
@@ -28,19 +28,22 @@ type scanner struct {
 //    fmt.Println("Counted",lines,"and",characters,"characters.")
 func NewScanner(r io.Reader) Scanner {
 	return &scanner{
-		br:  bufio.NewReader(r),
-		buf: make([]byte, 0, DefaultBufferSize),
+		br:          bufio.NewReader(r),
+		longLineBuf: make([]byte, 0, DefaultBufferSize),
 	}
 }
 
 // Bytes returns the byte slice that was just scanned.
 func (s scanner) Bytes() []byte {
-	return s.bs
+	return s.buf
 }
 
 // Err returns the error object associated with this scanner, or nil if no
 // errors have occurred.
 func (s scanner) Err() error {
+	if s.err == io.EOF {
+		return nil
+	}
 	return s.err
 }
 
@@ -49,45 +52,45 @@ func (s scanner) Err() error {
 // EOF.
 func (s *scanner) Scan() bool {
 	var isPrefix bool
-	s.bs, isPrefix, s.err = s.br.ReadLine()
+	s.buf, isPrefix, s.err = s.br.ReadLine()
+	if l := len(s.buf); l > 0 && s.buf[l-1] == '\r' {
+		s.buf = s.buf[:l-1]
+	}
 	if s.err != nil {
-		if s.err == io.EOF {
-			s.err = nil
-		}
 		return false
 	}
-
 	if !isPrefix {
 		return true
 	}
 
 	// found a long line
-	s.buf = append(s.buf[:0], s.bs...)
-	for {
-		s.bs, isPrefix, s.err = s.br.ReadLine()
-		s.buf = append(s.buf, s.bs...)
-		if s.err != nil {
-			if s.err == io.EOF {
-				s.err = nil
-			}
-			s.bs = s.buf
-			return false
-		}
-		if !isPrefix {
-			s.bs = s.buf
-			return true
-		}
+	s.longLineBuf = append(s.longLineBuf[:0], s.buf...) // copy bytes from bufio's internal buffer
+
+nextLine:
+	s.buf, isPrefix, s.err = s.br.ReadLine()
+	if l := len(s.buf); l > 0 && s.buf[l-1] == '\r' {
+		s.buf = s.buf[:l-1]
 	}
+	s.longLineBuf = append(s.longLineBuf, s.buf...)
+	if s.err != nil {
+		s.buf = s.longLineBuf // make entire line visible to caller
+		return false
+	}
+	if isPrefix {
+		goto nextLine
+	}
+	s.buf = s.longLineBuf // make entire line visible to caller
+	return true
 }
 
 // String returns the string representation of the byte slice returned by the
 // most recent Scan call.  DEPRECATED: Use the Text method.
 func (s scanner) String() string {
-	return string(s.bs)
+	return string(s.buf)
 }
 
 // Text returns the string representation of the byte slice returned by the most
 // recent Scan call.
 func (s scanner) Text() string {
-	return string(s.bs)
+	return string(s.buf)
 }
