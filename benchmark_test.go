@@ -10,28 +10,28 @@ import (
 func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(buf []byte) Scanner) {
 	b.Helper()
 
+	const lineCount = 100
 	wanted := makeBuffer(1, lineLength)
 	wanted = wanted[:len(wanted)-2] // trim final CRLF
-
-	// NOTE: make buffer with line count set to b.N
-	s := makeScanner(makeBuffer(b.N, lineLength))
-
-	var count int
+	buf := makeBuffer(lineCount, lineLength)
 
 	b.ResetTimer()
 
-	for s.Scan() {
-		if got := s.Bytes(); !bytes.Equal(got, wanted) {
-			b.Errorf("GOT: %#v; WANT: %#v", got, wanted)
+	for i := 0; i < b.N; i++ {
+		var count int
+		s := makeScanner(buf)
+		for s.Scan() {
+			if got := s.Bytes(); !bytes.Equal(got, wanted) {
+				b.Errorf("GOT: %#v; WANT: %#v", got, wanted)
+			}
+			count++
 		}
-		count++
-	}
-
-	if got, want := s.Err(), error(nil); got != want {
-		b.Errorf("GOT: %#v; WANT: %#v", got, want)
-	}
-	if got, want := count, b.N; got != want {
-		b.Errorf("GOT: %#v; WANT: %#v", got, want)
+		if got, want := s.Err(), error(nil); got != want {
+			b.Fatalf("GOT: %#v; WANT: %#v", got, want)
+		}
+		if got, want := count, lineCount; got != want {
+			b.Fatalf("GOT: %#v; WANT: %#v", got, want)
+		}
 	}
 }
 
