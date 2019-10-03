@@ -45,7 +45,7 @@ func BenchmarkScanner(b *testing.B) {
 					return bufio.NewScanner(bytes.NewReader(buf))
 				})
 			})
-			b.Run("reader", func(b *testing.B) {
+			b.Run("scanner", func(b *testing.B) {
 				benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
 					return NewScanner(bytes.NewReader(buf))
 				})
@@ -65,7 +65,7 @@ func BenchmarkScanner(b *testing.B) {
 				return bufio.NewScanner(bytes.NewReader(buf))
 			})
 		})
-		b.Run("reader", func(b *testing.B) {
+		b.Run("scanner", func(b *testing.B) {
 			benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
 				return NewScanner(bytes.NewReader(buf))
 			})
