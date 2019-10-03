@@ -51,36 +51,58 @@ func (s scanner) Err() error {
 // ought to continue or false if scanning is complete, because of error or
 // EOF.
 func (s *scanner) Scan() bool {
-	var isPrefix bool
-	s.buf, isPrefix, s.err = s.br.ReadLine()
-	if l := len(s.buf); l > 0 && s.buf[l-1] == '\r' {
-		s.buf = s.buf[:l-1]
-	}
-	if s.err != nil {
-		return false
-	}
-	if !isPrefix {
+	s.buf, s.err = s.br.ReadSlice('\n')
+	if s.err == nil {
+		if l := len(s.buf); l > 0 && s.buf[l-1] == '\n' {
+			if l > 1 && s.buf[l-2] == '\r' {
+				s.buf = s.buf[:l-2]
+			} else {
+				s.buf = s.buf[:l-1]
+			}
+		}
 		return true
 	}
-
-	// found a long line
-	s.longLineBuf = append(s.longLineBuf[:0], s.buf...) // copy bytes from bufio's internal buffer
-
-nextLine:
-	s.buf, isPrefix, s.err = s.br.ReadLine()
-	if l := len(s.buf); l > 0 && s.buf[l-1] == '\r' {
-		s.buf = s.buf[:l-1]
+	if s.err == io.EOF {
+		l := len(s.buf)
+		more := l > 0
+		if more && s.buf[l-1] == '\r' {
+			s.buf = s.buf[:l-1]
+		}
+		return more
 	}
-	s.longLineBuf = append(s.longLineBuf, s.buf...)
-	if s.err != nil {
-		s.buf = s.longLineBuf // make entire line visible to caller
+	if s.err != bufio.ErrBufferFull {
 		return false
 	}
-	if isPrefix {
-		goto nextLine
+
+	s.longLineBuf = append(s.longLineBuf[:0], s.buf...) // init then copy volatile bytes from bufio
+
+readMore:
+	s.buf, s.err = s.br.ReadSlice('\n')
+	s.longLineBuf = append(s.longLineBuf, s.buf...) // copy volatile bytes from bufio
+
+	if s.err == nil {
+		s.buf = s.longLineBuf
+		if l := len(s.buf); l > 0 && s.buf[l-1] == '\n' {
+			if l > 1 && s.buf[l-2] == '\r' {
+				s.buf = s.buf[:l-2]
+			} else {
+				s.buf = s.buf[:l-1]
+			}
+		}
+		return true
 	}
-	s.buf = s.longLineBuf // make entire line visible to caller
-	return true
+	if s.err == io.EOF {
+		l := len(s.buf)
+		more := l > 0
+		if more && s.buf[l-1] == '\r' {
+			s.buf = s.buf[:l-1]
+		}
+		return more
+	}
+	if s.err == bufio.ErrBufferFull {
+		goto readMore
+	}
+	return false
 }
 
 // String returns the string representation of the byte slice returned by the
