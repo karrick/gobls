@@ -3,20 +3,17 @@ package gobls
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"testing"
 )
 
-const (
-	shortLineLength    = 100 - 2
-	avgLineLength      = 1024 - 2
-	longLineLength     = 4096 - 2
-	veryLongLineLength = bufio.MaxScanTokenSize - 2
-)
+const excessivelyLongLineLength = bufio.MaxScanTokenSize - 2
 
 func makeBuffer(lineCount, lineLength int) []byte {
-	buf := make([]byte, 0, lineCount*(lineLength+2))
+	buf := make([]byte, 0, lineCount*lineLength)
 	for line := 0; line < lineCount; line++ {
-		for i := 0; i < lineLength; i++ {
+		// Each line terminated by CRLF
+		for i := 0; i < lineLength-2; i++ {
 			buf = append(buf, 'a')
 		}
 		buf = append(buf, '\r', '\n')
@@ -74,6 +71,7 @@ func ensureSequence(tb testing.TB, s Scanner, seq []string) {
 func TestEmpty(t *testing.T) {
 	corpus := ""
 	ensureSequence(t, bufio.NewScanner(bytes.NewBufferString(corpus)), nil)
+	ensureSequence(t, NewScanner(bytes.NewBufferString(corpus)), nil)
 	ensureSequence(t, NewBufferScanner([]byte(corpus)), nil)
 }
 
@@ -87,7 +85,7 @@ func TestSequencesThroughEntireBuffer(t *testing.T) {
 }
 
 func TestLongLinesRequireSingleInvocation(t *testing.T) {
-	buf := makeBuffer(1, longLineLength)
+	buf := makeBuffer(1, 4096)
 	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
 
@@ -112,7 +110,7 @@ func TestLongLinesRequireSingleInvocation(t *testing.T) {
 	test(NewBufferScanner([]byte(buf)))
 }
 
-func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
+func TestExcessivelyLongLinesRequireSingleInvocation(t *testing.T) {
 	buf := makeBuffer(1, bufio.MaxScanTokenSize+5)
 	line := string(buf)
 	line = line[:len(line)-2] // trim CRLF
@@ -133,7 +131,10 @@ func TestVeryLongLinesRequireSingleInvocation(t *testing.T) {
 		}
 	}
 
-	// test(bufio.NewScanner(bytes.NewReader(buf))) // bufio will return err = token too long
+	if false {
+		// Test skipped because bufio will return err = token too long
+		test(bufio.NewScanner(bytes.NewReader(buf)))
+	}
 	test(NewScanner(bytes.NewReader(buf)))
 	test(NewBufferScanner([]byte(buf)))
 }
@@ -147,97 +148,64 @@ func benchmarkScanner(b *testing.B, lineLength int, makeScanner func(buf []byte)
 	// NOTE: make buffer with line count set to b.N
 	s := makeScanner(makeBuffer(b.N, lineLength))
 
-	var line []byte
 	var count int
 
 	b.ResetTimer()
 
 	for s.Scan() {
-		line = s.Bytes()
+		if got := s.Bytes(); !bytes.Equal(got, wanted) {
+			b.Errorf("GOT: %#v; WANT: %#v", got, wanted)
+		}
 		count++
 	}
 
 	if got, want := s.Err(), error(nil); got != want {
 		b.Errorf("GOT: %#v; WANT: %#v", got, want)
 	}
-	// NOTE: ensure proper number of lines scanned
 	if got, want := count, b.N; got != want {
 		b.Errorf("GOT: %#v; WANT: %#v", got, want)
 	}
-	// NOTE: test line contents to prevent compiler optimization from eliding call to s.Bytes()
-	if !bytes.Equal(line, wanted) {
-		b.Fatalf("GOT: %#v; WANT: %#v", line, wanted)
+}
+
+func BenchmarkScanner(b *testing.B) {
+	for _, i := range []uint{6, 7, 8, 9, 10, 11, 12} {
+		lineLength := 1 << i
+
+		b.Run(fmt.Sprintf("%04d", lineLength), func(b *testing.B) {
+			b.Run("bufio", func(b *testing.B) {
+				benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+					return bufio.NewScanner(bytes.NewReader(buf))
+				})
+			})
+			b.Run("reader", func(b *testing.B) {
+				benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+					return NewScanner(bytes.NewReader(buf))
+				})
+			})
+			b.Run("buffer", func(b *testing.B) {
+				benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+					return NewBufferScanner(buf)
+				})
+			})
+		})
 	}
-}
 
-func BenchmarkScannerAverage(b *testing.B) {
-	b.Run("bufio", func(b *testing.B) {
-		benchmarkScanner(b, avgLineLength, func(buf []byte) Scanner {
-			return bufio.NewScanner(bytes.NewReader(buf))
+	b.Run("excessively long", func(b *testing.B) {
+		const lineLength = excessivelyLongLineLength
+		b.Run("bufio", func(b *testing.B) {
+			benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+				return bufio.NewScanner(bytes.NewReader(buf))
+			})
 		})
-	})
-	b.Run("reader", func(b *testing.B) {
-		benchmarkScanner(b, avgLineLength, func(buf []byte) Scanner {
-			return NewScanner(bytes.NewReader(buf))
+		b.Run("reader", func(b *testing.B) {
+			benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+				return NewScanner(bytes.NewReader(buf))
+			})
 		})
-	})
-	b.Run("buffer", func(b *testing.B) {
-		benchmarkScanner(b, avgLineLength, func(buf []byte) Scanner {
-			return NewBufferScanner(buf)
-		})
-	})
-}
-
-func BenchmarkScannerShort(b *testing.B) {
-	b.Run("bufio", func(b *testing.B) {
-		benchmarkScanner(b, shortLineLength, func(buf []byte) Scanner {
-			return bufio.NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("reader", func(b *testing.B) {
-		benchmarkScanner(b, shortLineLength, func(buf []byte) Scanner {
-			return NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("buffer", func(b *testing.B) {
-		benchmarkScanner(b, shortLineLength, func(buf []byte) Scanner {
-			return NewBufferScanner(buf)
-		})
-	})
-}
-
-func BenchmarkScannerLong(b *testing.B) {
-	b.Run("bufio", func(b *testing.B) {
-		benchmarkScanner(b, longLineLength, func(buf []byte) Scanner {
-			return bufio.NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("reader", func(b *testing.B) {
-		benchmarkScanner(b, longLineLength, func(buf []byte) Scanner {
-			return NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("buffer", func(b *testing.B) {
-		benchmarkScanner(b, longLineLength, func(buf []byte) Scanner {
-			return NewBufferScanner(buf)
-		})
-	})
-}
-
-func BenchmarkScannerVeryLong(b *testing.B) {
-	b.Run("bufio", func(b *testing.B) {
-		benchmarkScanner(b, veryLongLineLength, func(buf []byte) Scanner {
-			return bufio.NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("reader", func(b *testing.B) {
-		benchmarkScanner(b, veryLongLineLength, func(buf []byte) Scanner {
-			return NewScanner(bytes.NewReader(buf))
-		})
-	})
-	b.Run("buffer", func(b *testing.B) {
-		benchmarkScanner(b, veryLongLineLength, func(buf []byte) Scanner {
-			return NewBufferScanner(buf)
+		b.Run("buffer", func(b *testing.B) {
+			benchmarkScanner(b, lineLength, func(buf []byte) Scanner {
+				return NewBufferScanner(buf)
+			})
 		})
 	})
 }
