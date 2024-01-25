@@ -206,3 +206,34 @@ func TestScannerDoubleLine(t *testing.T) {
 		testSequenceBuffer(t, buf, want)
 	})
 }
+
+func TestScannerLongLineWithoutEndline(t *testing.T) {
+	t.Run("one long line", func(t *testing.T) {
+		buf := makeBuffer(1, 1<<16)
+		buf = buf[:len(buf)-2] // skip CLRF
+		line := string(buf)
+		want := []string{line}
+
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("multiple long lines", func(t *testing.T) {
+		buf := makeBuffer(3, 1<<16)
+		buf = buf[:len(buf)-2] // skip CLRF
+		line := string(buf[:(1<<16)-2])
+		want := []string{line, line, line}
+
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+	t.Run("long then short", func(t *testing.T) {
+		buf := append(makeBuffer(1, 1<<16), makeBuffer(1, 1<<8)...)
+		buf = buf[:len(buf)-2] // skip CLRF
+		line1 := string(buf[:(1<<16)-2])
+		line2 := string(buf[1<<16:])
+		want := []string{line1, line2}
+
+		testSequenceScanner(t, buf, want)
+		testSequenceBuffer(t, buf, want)
+	})
+}

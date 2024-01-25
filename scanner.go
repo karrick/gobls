@@ -16,16 +16,16 @@ type scanner struct {
 // allocates a scanning buffer with the default buffer size.  This per-scanner
 // buffer will grow to accomodate extremely long lines.
 //
-//    var lines, characters int
-//    ls := gobls.NewScanner(os.Stdin)
-//    for ls.Scan() {
-//        lines++
-//        characters += len(ls.Bytes())
-//    }
-//    if ls.Err() != nil {
-//        fmt.Fprintln(os.Stderr, "cannot scan:", ls.Err())
-//    }
-//    fmt.Println("Counted",lines,"and",characters,"characters.")
+//	var lines, characters int
+//	ls := gobls.NewScanner(os.Stdin)
+//	for ls.Scan() {
+//	    lines++
+//	    characters += len(ls.Bytes())
+//	}
+//	if ls.Err() != nil {
+//	    fmt.Fprintln(os.Stderr, "cannot scan:", ls.Err())
+//	}
+//	fmt.Println("Counted",lines,"and",characters,"characters.")
 func NewScanner(r io.Reader) Scanner {
 	return &scanner{
 		br:          bufio.NewReader(r),
@@ -92,6 +92,7 @@ readMore:
 		return true
 	}
 	if s.err == io.EOF {
+		s.buf = s.longLineBuf
 		l := len(s.buf)
 		more := l > 0
 		if more && s.buf[l-1] == '\r' {
